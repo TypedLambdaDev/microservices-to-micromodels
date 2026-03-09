@@ -4,9 +4,12 @@ import time
 import uvicorn
 
 from intent_classifier import classifier
-from entity_extractor import extract_entities
+# Import both entity extractors
+from entity_extractor import extract_entities as regex_extract_entities
+from spacy_entity_extractor import extract_entities as spacy_extract_entities
 from action_builder import build_action
 from executor import execute
+import os
 
 app = FastAPI(
     title="Natural Language CRUD API",
@@ -43,8 +46,19 @@ def query(request: QueryRequest):
         # Detect intent
         intent, confidence = classifier.predict(request.text)
         
-        # Extract entities
-        entities = extract_entities(request.text)
+        # Extract entities using spaCy by default
+        # Use environment variable to control which extractor to use
+        use_regex = os.environ.get("USE_REGEX_EXTRACTOR", "").lower() in ("true", "1", "yes")
+        
+        if use_regex:
+            entities = regex_extract_entities(request.text)
+        else:
+            try:
+                entities = spacy_extract_entities(request.text)
+            except Exception as e:
+                # Fallback to regex extractor if spaCy fails
+                print(f"SpaCy extractor failed: {str(e)}. Falling back to regex extractor.")
+                entities = regex_extract_entities(request.text)
         
         # Build action
         action = build_action(intent, entities)
@@ -74,6 +88,27 @@ def get_schema():
     """
     from schema import SCHEMA
     return {"schema": SCHEMA}
+
+@app.post("/compare_extractors")
+def compare_extractors(request: QueryRequest):
+    """
+    Compare the results of both entity extractors for the same text.
+    
+    Args:
+        request (QueryRequest): The request containing the natural language text
+        
+    Returns:
+        dict: The results from both extractors
+    """
+    # Extract entities using both extractors
+    regex_entities = regex_extract_entities(request.text)
+    spacy_entities = spacy_extract_entities(request.text)
+    
+    return {
+        "text": request.text,
+        "regex_extractor": regex_entities,
+        "spacy_extractor": spacy_entities
+    }
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

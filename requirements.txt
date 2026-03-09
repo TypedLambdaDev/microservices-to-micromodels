@@ -2,3 +2,4 @@ fasttext
 fastapi
 uvicorn
 pydantic
+spacy
