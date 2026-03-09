@@ -1,0 +1,16 @@
+__label__CREATE create user raj
+__label__CREATE add new customer
+__label__CREATE register user
+
+__label__READ show users
+__label__READ list customers
+__label__READ get user id 10
+
+__label__UPDATE update user email
+__label__UPDATE change email of user
+
+__label__DELETE delete user
+__label__DELETE remove customer
+
+__label__SEARCH find users older than 40
+__label__SEARCH search users age 30
