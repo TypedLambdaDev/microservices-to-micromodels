@@ -31,18 +31,34 @@ Response Formatter
 ## Project Structure
 
 ```
-nlcrud/
+/
 │
-├── app.py                 # FastAPI application
-├── intent_classifier.py   # Production-ready intent classifier
-├── entity_extractor.py    # Regex-based entity extraction logic
-├── spacy_entity_extractor.py # spaCy-based entity extraction logic
-├── action_builder.py      # Action building logic
-├── executor.py            # SQL execution engine
-├── schema.py              # Schema definition
-├── train_intent.py        # Intent model training script
-├── test_nlcrud.py         # Test script
-├── init_db.py             # Database initialization script
+├── main.py                # Main entry point for all functionality
+├── test_nlcrud.py         # Test script for natural language queries
+│
+├── nlcrud/                # Main package
+│   ├── api/               # API-related code
+│   │   ├── app.py         # FastAPI application
+│   │   └── action_builder.py # Action building logic
+│   │
+│   ├── entity_extraction/ # Entity extraction modules
+│   │   ├── regex_extractor.py # Regex-based entity extractor
+│   │   ├── spacy_extractor.py # spaCy-based entity extractor
+│   │   └── interface.py   # Unified interface for entity extraction
+│   │
+│   ├── intent_classification/ # Intent classification modules
+│   │   ├── classifier.py  # Intent classifier implementation
+│   │   ├── model.py       # Intent model definition
+│   │   ├── train.py       # Training script
+│   │   └── interface.py   # Unified interface for intent classification
+│   │
+│   ├── db/                # Database-related code
+│   │   ├── executor.py    # SQL execution engine
+│   │   ├── schema.py      # Schema definition
+│   │   ├── init.py        # Database initialization
+│   │   └── interface.py   # Unified interface for database operations
+│   │
+│   └── utils/             # Utility functions
 │
 ├── model/
 │   └── intent.ftz         # Trained FastText model
@@ -74,20 +90,91 @@ python -m spacy download en_core_web_sm
 
 3. Initialize the database:
 ```
-python init_db.py
+python -m nlcrud.db.init
 ```
 
 4. Train the intent model:
 ```
-python train_intent.py
+python -m nlcrud.intent_classification.train
 ```
 
 ## Usage
 
+The application provides a unified command-line interface for all functionality:
+
+### Starting the Server
+
+```
+python main.py serve [options]
+```
+
+Options:
+- `--host HOST`: Host to bind to (default: 0.0.0.0)
+- `--port PORT`: Port to bind to (default: 8000)
+- `--reload`: Enable auto-reload for development
+- `--extractor {regex,spacy}`: Entity extractor to use (default: spacy)
+- `--show-warnings`: Show all warnings (by default, warnings are suppressed)
+- `--log-level {debug,info,warning,error,critical}`: Set the logging level (default: info)
+
+Example:
+```
+python main.py serve --port 8080 --reload --extractor regex
+```
+
+### Running Tests
+
+```
+python main.py test [options]
+```
+
+Options:
+- `--show-warnings`: Show all warnings (by default, warnings are suppressed)
+
+Example:
+```
+python main.py test
+```
+
 ### Running the API Server
 
 ```
-uvicorn app:app --reload
+# Using the main.py entry point
+python main.py
+
+# Using the CLI after installation
+nlcrud serve --reload
+
+# Or directly with uvicorn
+uvicorn nlcrud.api.app:app --reload
+```
+
+### CLI Options
+
+The NLCRUD CLI provides several options for running the server:
+
+```
+nlcrud serve --host 0.0.0.0 --port 8000 --reload --extractor spacy
+```
+
+Options:
+- `--host`: Host to bind to (default: 0.0.0.0)
+- `--port`: Port to bind to (default: 8000)
+- `--reload`: Enable auto-reload for development
+- `--extractor`: Entity extractor to use (choices: regex, spacy; default: spacy)
+
+### Using with uv
+
+This project is compatible with [uv](https://github.com/astral-sh/uv), the fast Python package installer and resolver:
+
+```
+# Install uv
+curl -sSf https://astral.sh/uv/install.sh | bash
+
+# Install the project with uv
+uv pip install -e .
+
+# Install with development dependencies
+uv pip install -e ".[dev]"
 ```
 
 The API will be available at http://localhost:8000
@@ -182,17 +269,55 @@ The new implementation uses spaCy's Named Entity Recognition (NER) capabilities:
 - Custom entity recognition for domain-specific entities
 - Fallback to regex for certain patterns
 
-You can switch between extractors by setting the environment variable:
+You can switch between extractors in several ways:
+
+#### Using environment variables:
 ```
 # Use regex extractor
 export USE_REGEX_EXTRACTOR=true
-uvicorn app:app --reload
+python main.py
 
 # Use spaCy extractor (default)
-uvicorn app:app --reload
+python main.py
+```
+
+#### Using the CLI:
+```
+# Use regex extractor
+nlcrud serve --extractor regex
+
+# Use spaCy extractor
+nlcrud serve --extractor spacy
+```
+
+#### Using direct uvicorn command:
+```
+# Use regex extractor
+export USE_REGEX_EXTRACTOR=true
+uvicorn nlcrud.api.app:app --reload
+
+# Use spaCy extractor
+uvicorn nlcrud.api.app:app --reload
 ```
 
 You can also compare both extractors using the `/compare_extractors` endpoint.
+
+## Modular Package Structure
+
+The codebase has been reorganized into a modular package structure with the following benefits:
+
+- **Separation of Concerns**: Each module has a clear responsibility
+- **Better Maintainability**: Easier to understand and modify individual components
+- **Improved Testability**: Components can be tested in isolation
+- **Cleaner Interfaces**: Each module exposes a well-defined interface
+- **Extensibility**: New implementations can be added without modifying existing code
+
+The new structure follows these design principles:
+
+1. **Interface Segregation**: Each module provides a clean interface that hides implementation details
+2. **Dependency Inversion**: High-level modules depend on abstractions, not concrete implementations
+3. **Single Responsibility**: Each module has one clear purpose
+4. **Open/Closed**: The system is open for extension but closed for modification
 
 ## Future Improvements
 

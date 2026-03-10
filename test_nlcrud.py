@@ -1,8 +1,8 @@
 import time
-from intent_classifier import classifier
-from entity_extractor import extract_entities
-from action_builder import build_action
-from executor import execute
+from nlcrud.intent_classification.classifier import classifier
+from nlcrud.entity_extraction.regex_extractor import extract_entities
+from nlcrud.api.action_builder import build_action
+from nlcrud.db.executor import execute
 
 def process_query(text):
     """

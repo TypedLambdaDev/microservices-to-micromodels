@@ -1,5 +1,5 @@
 import re
-from schema import SCHEMA
+from nlcrud.db.schema import SCHEMA
 
 def extract_entities(text: str):
     """

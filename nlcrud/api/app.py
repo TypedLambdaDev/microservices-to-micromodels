@@ -1,15 +1,18 @@
+"""
+FastAPI application for Natural Language CRUD operations.
+"""
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import time
-import uvicorn
-
-from intent_classifier import classifier
-# Import both entity extractors
-from entity_extractor import extract_entities as regex_extract_entities
-from spacy_entity_extractor import extract_entities as spacy_extract_entities
-from action_builder import build_action
-from executor import execute
 import os
+
+# Import from our module structure
+from nlcrud.intent_classification.classifier import classifier
+from nlcrud.entity_extraction.regex_extractor import extract_entities as regex_extract_entities
+from nlcrud.entity_extraction.spacy_extractor import extract_entities as spacy_extract_entities
+from nlcrud.db.executor import execute
+from nlcrud.db.schema import SCHEMA
+from .action_builder import build_action
 
 app = FastAPI(
     title="Natural Language CRUD API",
@@ -79,18 +82,17 @@ def query(request: QueryRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/schema")
-def get_schema():
+def get_schema_info():
     """
     Get the available schema information.
     
     Returns:
         dict: The schema information
     """
-    from schema import SCHEMA
     return {"schema": SCHEMA}
 
 @app.post("/compare_extractors")
-def compare_extractors(request: QueryRequest):
+def compare_extractors_endpoint(request: QueryRequest):
     """
     Compare the results of both entity extractors for the same text.
     
@@ -111,4 +113,5 @@ def compare_extractors(request: QueryRequest):
     }
 
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    import uvicorn
+    uvicorn.run("nlcrud.api.app:app", host="0.0.0.0", port=8000, reload=True)

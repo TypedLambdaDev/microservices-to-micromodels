@@ -42,7 +42,11 @@ class IntentClassifier:
         
         try:
             # Get prediction from model
-            prediction = self.model.predict(text)
+            # Suppress warnings by using a try-except block
+            import warnings
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=DeprecationWarning)
+                prediction = self.model.predict(text)
             
             # Extract label and confidence
             label = prediction[0][0].replace("__label__", "")

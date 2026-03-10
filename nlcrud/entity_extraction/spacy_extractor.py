@@ -1,6 +1,6 @@
 import spacy
 import re
-from schema import SCHEMA
+from nlcrud.db.schema import SCHEMA
 
 class SpacyEntityExtractor:
     """

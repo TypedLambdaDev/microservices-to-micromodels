@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from schema import SCHEMA
+from nlcrud.db.schema import SCHEMA
 
 # Ensure the db directory exists
 os.makedirs("db", exist_ok=True)
