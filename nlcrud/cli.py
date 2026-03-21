@@ -10,6 +10,10 @@ import warnings
 import logging
 import uvicorn
 
+from nlcrud.logger import get_logger
+
+logger = get_logger("cli")
+
 # Configure logging to suppress specific error messages
 logging.basicConfig(level=logging.INFO)
 
@@ -116,18 +120,19 @@ def main():
             if original_stderr:
                 sys.stderr = original_stderr
     elif args.command == "test":
-        # Apply stdout filter to suppress NumPy warnings
-        if not args.show_warnings:
-            sys.stdout = StdoutFilter()
-            
+        # Run tests using pytest
         try:
-            # Import and run the tests
-            from test_nlcrud import run_tests
-            run_tests()
-        finally:
-            # Restore original stdout
-            if not args.show_warnings:
-                sys.stdout = sys.stdout.original_stdout
+            import subprocess
+            # Run pytest on tests directory
+            result = subprocess.run(
+                ["python", "-m", "pytest", "tests/", "-v", "--tb=short"],
+                cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                check=False
+            )
+            sys.exit(result.returncode)
+        except ImportError:
+            logger.error("pytest is not installed. Install with: pip install pytest")
+            sys.exit(1)
     else:
         # If no command is provided, show help
         parser.print_help()

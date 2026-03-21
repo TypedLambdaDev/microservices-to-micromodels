@@ -49,11 +49,18 @@ Response Formatter
 - **Configuration**: `USE_REGEX_EXTRACTOR` environment variable
 - **Interface**: `extract_entities(text: str) → Dict[str, Any]`
 
-### 3. Action Builder (`nlcrud/api/action_builder.py`)
+### 3. Action Builder (`nlcrud/action/`)
 - **Purpose**: Convert intent + entities into structured CRUD action
+- **Implementation**: `action/builder.py` - ActionBuilder class
+- **Domain Model**: `action/action.py` - Action dataclass with validation
 - **Process**: Validates against database schema, maps entities to columns
-- **Returns**: Action dict with operation type, resource, and parameters
+- **Returns**: Action object with operation type, resource, filters, and data
 - **Latency**: <1ms
+- **Files**:
+  - `action/action.py` - Core Action domain object
+  - `action/builder.py` - ActionBuilder implementation
+  - `action/validator.py` - Action validation logic
+  - `api/action_builder.py` - API layer re-exports
 
 ### 4. Database Execution (`nlcrud/db/`)
 - **Standard executor** (`executor.py`): Rule-based SQL generation
@@ -62,14 +69,45 @@ Response Formatter
 - **Features**: Fallback mechanisms, error handling, result formatting
 - **Latency**: ~5ms (SQL execution)
 
-### 5. API Layer (`nlcrud/api/app.py`)
+### 5. API Layer (`nlcrud/api/`)
 - **Framework**: FastAPI
-- **Main endpoint**: `POST /query` - Process natural language text
-- **Debug endpoints**:
+- **app.py**: Application setup and routes
+  - `POST /query` - Process natural language text
   - `GET /schema` - View database schema
   - `POST /compare_extractors` - Compare regex vs spaCy on same input
   - `POST /generate_sql` - Generate SQL without executing (SQLCoder only)
-- **Logging**: Full pipeline execution printed to stdout for debugging
+- **handlers.py**: Business logic classes
+  - `QueryHandler` - Process queries through full pipeline
+  - `SQLGenerationHandler` - Generate SQL without execution
+- **schemas.py**: Request/response validation
+  - `QueryRequest`, `QueryResponse` - Main query interface
+  - `ActionSchema` - Structured CRUD action
+  - `GenerateSQLRequest/Response`, `SchemaResponse` - Other endpoints
+- **action_builder.py**: Re-exports from `nlcrud.action` module
+
+### 6. Infrastructure Modules
+
+#### Configuration (`nlcrud/config.py`)
+- Lazy-loaded configuration management
+- `OllamaConfig` - LLM settings
+- `DatabaseConfig` - Database settings
+- `get_config()` - Get global configuration instance
+- Environment variable overrides
+
+#### Logging (`nlcrud/logger.py`)
+- Structured logging setup using Python's logging module
+- `get_logger(name)` - Get named logger instance
+- `setup_logging(level)` - Initialize logging system
+- All output goes through logger (not print statements)
+
+#### Exception Hierarchy (`nlcrud/exceptions.py`)
+- `NLCRUDError` - Base exception
+- `IntentClassificationError` - Intent detection failures
+- `EntityExtractionError` - Entity extraction failures
+- `ActionBuildError` - Action building failures
+- `ExecutionError` - Database execution failures
+- `SQLGenerationError` - SQL generation failures
+- Other domain-specific exceptions
 
 ## Common Development Commands
 
@@ -117,17 +155,16 @@ python main.py serve --reload
 
 ### Running Tests
 ```bash
-# Run all tests
-python main.py test
+# Run all tests with pytest
+pytest tests/ -v
 
-# Run with all warnings visible
-python main.py test --show-warnings
+# Run with coverage
+pytest tests/ -v --cov=nlcrud
 
 # Run specific test file
-python test_nlcrud.py              # Main test suite
-python test_sqlcoder.py            # SQLCoder tests
-python test_ollama_direct.py       # Ollama connectivity tests
-python test_data_flow.py           # Data flow tests
+pytest tests/unit/test_pipeline.py              # Unit tests
+pytest tests/integration/test_query_pipeline.py # Integration tests
+pytest tests/integration/test_sqlcoder_executor.py  # SQLCoder tests
 ```
 
 ### Direct Server Invocation (alternative)
@@ -194,27 +231,43 @@ OLLAMA_MODEL=sqlcoder
 
 ```
 nlcrud/
+├── action/                           # CRUD action domain and building
+│   ├── action.py                    # Action dataclass with validation
+│   ├── builder.py                   # ActionBuilder class (intent+entities → action)
+│   ├── validator.py                 # Action validation logic
+│   └── __init__.py                  # Module exports
 ├── api/                              # REST API layer
-│   ├── app.py                       # FastAPI application (main entry)
-│   └── action_builder.py            # Intent + entities → action schema
+│   ├── app.py                       # FastAPI application setup and routes
+│   ├── handlers.py                  # QueryHandler and SQLGenerationHandler
+│   ├── schemas.py                   # Pydantic request/response models
+│   └── action_builder.py            # Re-exports from nlcrud.action
 ├── intent_classification/            # Intent detection module
-│   ├── classifier.py                # FastText wrapper
+│   ├── classifier.py                # FastText wrapper and classifier
 │   ├── model.py                     # Intent label definitions
-│   ├── train.py                     # Model training
-│   └── interface.py                 # Abstract interface
+│   ├── train.py                     # Model training script
+│   ├── interface.py                 # Abstract EntityExtractor interface
+│   └── __init__.py
 ├── entity_extraction/                # Entity extraction module
-│   ├── regex_extractor.py           # Fast regex-based
-│   ├── spacy_extractor.py           # Accurate NER-based
-│   └── interface.py                 # Abstract interface
+│   ├── regex_extractor.py           # Fast regex-based extraction
+│   ├── spacy_extractor.py           # Accurate NER-based extraction
+│   ├── interface.py                 # Abstract interface
+│   └── __init__.py
 ├── db/                               # Database execution layer
-│   ├── executor.py                  # Rule-based SQL generator
-│   ├── sqlcoder_executor.py         # Ollama/LLM-based SQL generator
+│   ├── executor.py                  # RuleBasedExecutor: deterministic SQL generation
+│   ├── sqlcoder_executor.py         # SQLCoderExecutor: LLM-based SQL via Ollama
+│   ├── interface.py                 # DatabaseExecutor abstract interface
 │   ├── schema.py                    # Database schema definitions
-│   ├── init.py                      # Database initialization
-│   └── interface.py                 # Abstract interface
-├── utils/                            # Utility functions
-├── cli.py                            # CLI argument parsing and server startup
-└── tests/                            # Test utilities
+│   ├── init.py                      # Database initialization and seeding
+│   ├── models/                      # Domain models for type-safety
+│   │   ├── user.py                  # User entity model
+│   │   ├── order.py                 # Order entity model
+│   │   └── __init__.py
+│   └── __init__.py
+├── config.py                         # Centralized configuration management
+├── logger.py                         # Logging infrastructure setup
+├── exceptions.py                     # Custom exception hierarchy
+├── cli.py                            # CLI entry point and argument parsing
+└── __init__.py
 
 db/
 └── db.sqlite                        # SQLite database file
@@ -225,13 +278,28 @@ model/
 data/
 └── intent_train.txt                 # Intent training data (FastText format)
 
+tests/                               # Test suite
+├── unit/                            # Unit tests
+│   └── test_pipeline.py            # Pipeline component tests
+├── integration/                     # Integration tests
+│   ├── test_query_pipeline.py      # End-to-end query processing
+│   ├── test_query_pipeline.py      # SpaCy extractor integration
+│   ├── test_sqlcoder_executor.py   # SQLCoder executor tests
+│   └── test_ollama_connectivity.py # Ollama API connectivity
+├── conftest.py                      # Pytest configuration and fixtures
+└── fixtures/                        # Shared test fixtures
+
 Root level:
 ├── main.py                          # Unified CLI entry point
-├── test_nlcrud.py                  # Main test suite
-├── test_sqlcoder.py                # SQLCoder-specific tests
-├── test_ollama_direct.py           # Ollama connectivity tests
-├── test_data_flow.py               # Data flow integration tests
-└── .env.example                     # Configuration template
+├── pyproject.toml                   # Modern Python project configuration
+├── requirements.txt                 # Dependency list (for reference)
+├── setup.py                         # Legacy setuptools config (deprecated)
+├── Makefile                         # Development task automation
+├── pytest.ini                       # Pytest configuration
+├── .pre-commit-config.yaml          # Pre-commit hooks configuration
+├── .env.example                     # Configuration template
+└── scripts/                         # Utility scripts
+    └── enforce_uv.sh               # UV package manager enforcement
 ```
 
 ## Architecture Design Patterns
