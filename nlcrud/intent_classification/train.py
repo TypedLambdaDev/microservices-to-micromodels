@@ -1,5 +1,9 @@
 import fasttext
 
+from nlcrud.logger import get_logger
+
+logger = get_logger("intent_classification.train")
+
 # Train the model
 model = fasttext.train_supervised(
     input="data/intent_train.txt",
@@ -11,4 +15,4 @@ model = fasttext.train_supervised(
 # Save the model
 model.save_model("model/intent.ftz")
 
-print("Model trained and saved successfully.")
+logger.info("Model trained and saved successfully.")

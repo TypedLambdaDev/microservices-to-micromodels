@@ -6,6 +6,9 @@ import sqlite3
 import os
 
 from nlcrud.db.executor import initialize_database
+from nlcrud.logger import get_logger
+
+logger = get_logger("db.init")
 
 
 def seed_sample_data(db_path: str = "db/db.sqlite") -> None:
@@ -67,4 +70,4 @@ def init_db(db_path: str = "db/db.sqlite", seed: bool = True) -> None:
 
 if __name__ == "__main__":
     init_db()
-    print("Database initialized with sample data.")
+    logger.info("Database initialized with sample data.")

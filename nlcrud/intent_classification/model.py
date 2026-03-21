@@ -1,10 +1,14 @@
 import fasttext
 import os
 
+from nlcrud.logger import get_logger
+
+logger = get_logger("intent_classification.model")
+
 # Check if model exists, if not, create a placeholder message
 model_path = "model/intent.ftz"
 if not os.path.exists(model_path):
-    print(f"Model file not found at {model_path}. Please run train_intent.py first.")
+    logger.error(f"Model file not found at {model_path}. Please run train_intent.py first.")
     model = None
 else:
     model = fasttext.load_model(model_path)

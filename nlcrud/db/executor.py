@@ -9,6 +9,9 @@ from typing import Any, Dict, Union
 
 from nlcrud.db.schema import SCHEMA
 from nlcrud.db.interface import DatabaseExecutor
+from nlcrud.logger import get_logger
+
+logger = get_logger("db.executor")
 
 
 def initialize_database(db_path: str = "db/db.sqlite") -> None:
@@ -95,16 +98,16 @@ class RuleBasedExecutor(DatabaseExecutor):
         Returns:
             Dictionary with the result of the execution
         """
-        print("\n===== DATABASE EXECUTION LAYER =====")
-        print(f"Executing action: {action}")
+        logger.debug("===== DATABASE EXECUTION LAYER =====")
+        logger.debug(f"Executing action: {action}")
 
         resource = self._get_action_attr(action, "resource")
         if resource is None:
-            print("ERROR: No resource specified in action")
+            logger.error("No resource specified in action")
             return {"error": "No resource specified"}
 
         table = SCHEMA[resource]["table"]
-        print(f"Using table: {table}")
+        logger.debug(f"Using table: {table}")
 
         intent = self._get_action_attr(action, "intent")
         filters = self._get_action_attr(action, "filters")
@@ -121,7 +124,7 @@ class RuleBasedExecutor(DatabaseExecutor):
 
         handler = dispatch.get(intent)
         if not handler:
-            print(f"ERROR: Unknown intent: {intent}")
+            logger.error(f"Unknown intent: {intent}")
             return {"error": f"Unknown intent: {intent}"}
 
         return handler()
@@ -136,7 +139,7 @@ class RuleBasedExecutor(DatabaseExecutor):
         Returns:
             Dictionary with status and results
         """
-        print("\n----- READ Operation Details -----")
+        logger.debug("===== READ Operation =====")
         sql = f"SELECT * FROM {table}"
         params = []
 
@@ -148,8 +151,8 @@ class RuleBasedExecutor(DatabaseExecutor):
 
             sql += " WHERE " + " AND ".join(where_clauses)
 
-        print(f"Generated SQL: {sql}")
-        print(f"SQL parameters: {params}")
+        logger.debug(f"Generated SQL: {sql}")
+        logger.debug(f"SQL parameters: {params}")
 
         self.cursor.execute(sql, params)
         columns = [description[0] for description in self.cursor.description]
@@ -158,8 +161,8 @@ class RuleBasedExecutor(DatabaseExecutor):
         for row in self.cursor.fetchall():
             results.append(dict(zip(columns, row)))
 
-        print(f"Query returned {len(results)} results")
-        print(f"Result data: {results}")
+        logger.info(f"Query returned {len(results)} results")
+        logger.debug(f"Result data: {results}")
 
         return {"status": "success", "data": results}
 
@@ -173,10 +176,10 @@ class RuleBasedExecutor(DatabaseExecutor):
         Returns:
             Dictionary with status, message, and inserted ID
         """
-        print("\n----- CREATE Operation Details -----")
+        logger.debug("===== CREATE Operation =====")
 
         if not data:
-            print("ERROR: No data provided for creation")
+            logger.error("No data provided for creation")
             return {"error": "No data provided for creation"}
 
         keys = list(data.keys())
@@ -185,14 +188,14 @@ class RuleBasedExecutor(DatabaseExecutor):
 
         sql = f"INSERT INTO {table} ({', '.join(keys)}) VALUES ({', '.join(placeholders)})"
 
-        print(f"Generated SQL: {sql}")
-        print(f"SQL parameters: {values}")
+        logger.debug(f"Generated SQL: {sql}")
+        logger.debug(f"SQL parameters: {values}")
 
         self.cursor.execute(sql, values)
         self.conn.commit()
 
         new_id = self.cursor.lastrowid
-        print(f"Created new record with ID: {new_id}")
+        logger.info(f"Created new record with ID: {new_id}")
 
         return {"status": "success", "message": f"Created in {table}", "id": new_id}
 
@@ -209,14 +212,14 @@ class RuleBasedExecutor(DatabaseExecutor):
         Returns:
             Dictionary with status, message, and number of rows affected
         """
-        print("\n----- UPDATE Operation Details -----")
+        logger.debug("===== UPDATE Operation =====")
 
         if not filters:
-            print("ERROR: No filters provided for update")
+            logger.error("No filters provided for update")
             return {"error": "No filters provided for update"}
 
         if not data:
-            print("ERROR: No data provided for update")
+            logger.error("No data provided for update")
             return {"error": "No data provided for update"}
 
         set_clause = ", ".join([f"{key} = ?" for key in data.keys()])
@@ -229,16 +232,16 @@ class RuleBasedExecutor(DatabaseExecutor):
 
         sql = f"UPDATE {table} SET {set_clause} WHERE {' AND '.join(where_clauses)}"
 
-        print(f"Generated SQL: {sql}")
-        print(f"SQL parameters: {params}")
-        print(f"  - SET parameters: {list(data.values())}")
-        print(f"  - WHERE parameters: {[filters[key] for key in filters]}")
+        logger.debug(f"Generated SQL: {sql}")
+        logger.debug(f"SQL parameters: {params}")
+        logger.debug(f"  - SET parameters: {list(data.values())}")
+        logger.debug(f"  - WHERE parameters: {[filters[key] for key in filters]}")
 
         self.cursor.execute(sql, params)
         self.conn.commit()
 
         rows_affected = self.cursor.rowcount
-        print(f"Updated {rows_affected} rows")
+        logger.info(f"Updated {rows_affected} rows")
 
         return {
             "status": "success",
@@ -256,10 +259,10 @@ class RuleBasedExecutor(DatabaseExecutor):
         Returns:
             Dictionary with status, message, and number of rows affected
         """
-        print("\n----- DELETE Operation Details -----")
+        logger.debug("===== DELETE Operation =====")
 
         if not filters:
-            print("ERROR: No filters provided for deletion")
+            logger.error("No filters provided for deletion")
             return {"error": "No filters provided for deletion"}
 
         where_clauses = []
@@ -271,14 +274,14 @@ class RuleBasedExecutor(DatabaseExecutor):
 
         sql = f"DELETE FROM {table} WHERE {' AND '.join(where_clauses)}"
 
-        print(f"Generated SQL: {sql}")
-        print(f"SQL parameters: {params}")
+        logger.debug(f"Generated SQL: {sql}")
+        logger.debug(f"SQL parameters: {params}")
 
         self.cursor.execute(sql, params)
         self.conn.commit()
 
         rows_affected = self.cursor.rowcount
-        print(f"Deleted {rows_affected} rows")
+        logger.info(f"Deleted {rows_affected} rows")
 
         return {
             "status": "success",
@@ -298,7 +301,7 @@ class RuleBasedExecutor(DatabaseExecutor):
         Returns:
             Dictionary with status and search results
         """
-        print("\n----- SEARCH Operation Details -----")
+        logger.debug("===== SEARCH Operation =====")
 
         sql = f"SELECT * FROM {table} WHERE "
         conditions = []
@@ -308,20 +311,20 @@ class RuleBasedExecutor(DatabaseExecutor):
             if isinstance(value, (int, float)):
                 conditions.append(f"{key} = ?")
                 params.append(value)
-                print(f"Adding exact match condition for {key} = {value}")
+                logger.debug(f"Adding exact match condition for {key} = {value}")
             elif isinstance(value, str):
                 conditions.append(f"{key} LIKE ?")
                 params.append(f"%{value}%")
-                print(f"Adding LIKE condition for {key} LIKE '%{value}%'")
+                logger.debug(f"Adding LIKE condition for {key} LIKE '%{value}%'")
 
         if not conditions:
-            print("ERROR: No search criteria provided")
+            logger.error("No search criteria provided")
             return {"error": "No search criteria provided"}
 
         sql += " AND ".join(conditions)
 
-        print(f"Generated SQL: {sql}")
-        print(f"SQL parameters: {params}")
+        logger.debug(f"Generated SQL: {sql}")
+        logger.debug(f"SQL parameters: {params}")
 
         self.cursor.execute(sql, params)
         columns = [description[0] for description in self.cursor.description]
@@ -330,8 +333,8 @@ class RuleBasedExecutor(DatabaseExecutor):
         for row in self.cursor.fetchall():
             results.append(dict(zip(columns, row)))
 
-        print(f"Search returned {len(results)} results")
-        print(f"Result data: {results}")
+        logger.info(f"Search returned {len(results)} results")
+        logger.debug(f"Result data: {results}")
 
         return {"status": "success", "data": results}
 

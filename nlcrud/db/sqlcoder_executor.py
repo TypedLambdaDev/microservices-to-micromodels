@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 
 from nlcrud.db.schema import SCHEMA
 from nlcrud.db.interface import DatabaseExecutor
+from nlcrud.logger import get_logger
+
+logger = get_logger("db.sqlcoder")
 
 # Load environment variables
 load_dotenv()
@@ -26,7 +29,7 @@ cursor = conn.cursor()
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434/api/generate")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "sqlcoder")
 
-print(f"Using Ollama LLM provider at {OLLAMA_URL} with model {OLLAMA_MODEL}")
+logger.info(f"Using Ollama LLM provider at {OLLAMA_URL} with model {OLLAMA_MODEL}")
 
 
 def generate_sql_from_nl(intent, resource, filters, data):
@@ -76,21 +79,21 @@ Respond with only the SQL query, no explanations.
 """
 
     try:
-        print(f"Sending prompt to Ollama:\n{prompt}")
+        logger.debug(f"Sending prompt to Ollama:\n{prompt}")
 
         # Call Ollama
         sql_query = call_ollama(prompt)
 
         # If we couldn't extract a valid SQL query, try our fallback generator
         if not sql_query:
-            print("Failed to extract valid SQL from Ollama response. Using fallback SQL generator.")
+            logger.debug("Failed to extract valid SQL from Ollama response. Using fallback SQL generator.")
             sql_query = generate_fallback_sql(intent, resource, filters, data)
 
-        print(f"Generated SQL query: {sql_query}")
+        logger.debug(f"Generated SQL query: {sql_query}")
         return sql_query
 
     except Exception as e:
-        print(f"Error generating SQL with Ollama: {str(e)}")
+        logger.info(f"Error generating SQL with Ollama: {str(e)}")
         return None
 
 def call_ollama(prompt):
@@ -127,7 +130,7 @@ def call_ollama(prompt):
         
         return sql_query
     except Exception as e:
-        print(f"Error calling Ollama: {str(e)}")
+        logger.info(f"Error calling Ollama: {str(e)}")
         return None
 
 def extract_sql_from_text(text):
@@ -211,7 +214,7 @@ def extract_sql_from_text(text):
                 return line
     
     # If all else fails, return a default query based on the intent and table
-    print("WARNING: Could not extract valid SQL from LLM response. Using fallback.")
+    logger.info("WARNING: Could not extract valid SQL from LLM response. Using fallback.")
     return None
 
 def generate_fallback_sql(intent, resource, filters, data):
@@ -304,13 +307,13 @@ class SQLCoderExecutor(DatabaseExecutor):
         Returns:
             Dictionary with execution result
         """
-        print("\n===== SQLCODER DATABASE EXECUTION LAYER =====")
-        print(f"Executing action: {action}")
+        logger.debug("\n===== SQLCODER DATABASE EXECUTION LAYER =====")
+        logger.debug(f"Executing action: {action}")
 
         # Handle both dict and Action object
         resource = action["resource"] if isinstance(action, dict) else action.resource
         if resource is None:
-            print("ERROR: No resource specified in action")
+            logger.info("ERROR: No resource specified in action")
             return {"error": "No resource specified"}
 
         # Get fields from action (handle both dict and object)
@@ -322,10 +325,10 @@ class SQLCoderExecutor(DatabaseExecutor):
         sql = generate_sql_from_nl(intent, resource, filters, data)
 
         if not sql:
-            print("ERROR: Failed to generate SQL query")
+            logger.info("ERROR: Failed to generate SQL query")
             return {"error": "Failed to generate SQL query"}
 
-        print(f"Generated SQL: {sql}")
+        logger.debug(f"Generated SQL: {sql}")
 
         try:
             cursor.execute(sql)
@@ -336,18 +339,18 @@ class SQLCoderExecutor(DatabaseExecutor):
             if sql_upper.startswith("SELECT"):
                 columns = [description[0] for description in cursor.description]
                 results = [dict(zip(columns, row)) for row in cursor.fetchall()]
-                print(f"Query returned {len(results)} results")
+                logger.debug(f"Query returned {len(results)} results")
                 return {"status": "success", "data": results}
             else:
                 rows_affected = cursor.rowcount
-                print(f"Query affected {rows_affected} rows")
+                logger.debug(f"Query affected {rows_affected} rows")
                 return {
                     "status": "success",
                     "message": f"Executed in {resource}",
                     "rows_affected": rows_affected,
                 }
         except Exception as e:
-            print(f"ERROR executing SQL: {e}")
+            logger.info(f"ERROR executing SQL: {e}")
             return {"error": str(e)}
 
 
