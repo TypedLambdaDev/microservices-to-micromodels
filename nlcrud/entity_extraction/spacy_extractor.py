@@ -1,8 +1,12 @@
 import spacy
 import re
-from nlcrud.db.schema import SCHEMA
+from typing import Dict, Any
 
-class SpacyEntityExtractor:
+from nlcrud.db.schema import SCHEMA
+from nlcrud.entity_extraction.interface import EntityExtractor
+
+
+class SpacyEntityExtractor(EntityExtractor):
     """
     Entity extractor using spaCy NLP capabilities for more accurate entity recognition.
     """

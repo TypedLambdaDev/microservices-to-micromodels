@@ -1,6 +1,9 @@
 import sqlite3
 import os
+from typing import Any, Dict, Union
+
 from nlcrud.db.schema import SCHEMA
+from nlcrud.db.interface import DatabaseExecutor
 
 # Ensure the db directory exists
 os.makedirs("db", exist_ok=True)
@@ -9,10 +12,9 @@ os.makedirs("db", exist_ok=True)
 conn = sqlite3.connect("db/db.sqlite", check_same_thread=False)
 cursor = conn.cursor()
 
-def initialize_database():
-    """
-    Initialize the database by creating tables based on the schema.
-    """
+
+def initialize_database() -> None:
+    """Initialize the database by creating tables based on the schema."""
     # Create users table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS users (
@@ -22,7 +24,7 @@ def initialize_database():
         age INTEGER
     )
     ''')
-    
+
     # Create orders table
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS orders (
@@ -32,52 +34,106 @@ def initialize_database():
         FOREIGN KEY (user_id) REFERENCES users (id)
     )
     ''')
-    
+
     conn.commit()
 
-def execute(action):
-    """
-    Execute a structured CRUD action against the database.
-    
+
+def _get_action_attr(action: Union[Dict[str, Any], Any], attr: str) -> Any:
+    """Get attribute from action (works with dict or Action object).
+
     Args:
-        action (dict): The structured action to execute
-        
+        action: Action dict or Action object
+        attr: Attribute name
+
     Returns:
-        dict: The result of the execution
+        Attribute value
     """
-    print("\n===== DATABASE EXECUTION LAYER =====")
-    print(f"Executing action: {action}")
-    
-    if action["resource"] is None:
-        print("ERROR: No resource specified in action")
-        return {"error": "No resource specified"}
-    
-    table = SCHEMA[action["resource"]]["table"]
-    print(f"Using table: {table}")
-    
-    if action["intent"] == "READ":
-        print(f"Handling READ operation with filters: {action['filters']}")
-        return handle_read(table, action["filters"])
-    
-    elif action["intent"] == "CREATE":
-        print(f"Handling CREATE operation with data: {action['data']}")
-        return handle_create(table, action["data"])
-    
-    elif action["intent"] == "UPDATE":
-        print(f"Handling UPDATE operation with filters: {action['filters']} and data: {action['data']}")
-        return handle_update(table, action["filters"], action["data"])
-    
-    elif action["intent"] == "DELETE":
-        print(f"Handling DELETE operation with filters: {action['filters']}")
-        return handle_delete(table, action["filters"])
-    
-    elif action["intent"] == "SEARCH":
-        print(f"Handling SEARCH operation with criteria: {action['data']}")
-        return handle_search(table, action["data"])
-    
-    else:
-        print(f"ERROR: Unknown intent: {action['intent']}")
-        return {"error": f"Unknown intent: {action['intent']}"}
+    if isinstance(action, dict):
+        return action[attr]
+    return getattr(action, attr)
+
+
+class RuleBasedExecutor(DatabaseExecutor):
+    """Rule-based database executor.
+
+    Executes CRUD actions using predefined SQL generation rules.
+    """
+
+    def __init__(self, db_path: str = "db/db.sqlite") -> None:
+        """Initialize executor with database path.
+
+        Args:
+            db_path: Path to SQLite database
+        """
+        self.db_path = db_path
+        self.conn = conn
+        self.cursor = cursor
+
+    def execute(self, action: Union[Dict[str, Any], Any]) -> Dict[str, Any]:
+        """Execute a structured CRUD action against the database.
+
+        Args:
+            action: The structured action to execute (dict or Action object)
+
+        Returns:
+            Dictionary with the result of the execution
+        """
+        print("\n===== DATABASE EXECUTION LAYER =====")
+        print(f"Executing action: {action}")
+
+        resource = _get_action_attr(action, "resource")
+        if resource is None:
+            print("ERROR: No resource specified in action")
+            return {"error": "No resource specified"}
+
+        table = SCHEMA[resource]["table"]
+        print(f"Using table: {table}")
+
+        intent = _get_action_attr(action, "intent")
+        filters = _get_action_attr(action, "filters")
+        data = _get_action_attr(action, "data")
+
+        if intent == "READ":
+            print(f"Handling READ operation with filters: {filters}")
+            return handle_read(table, filters)
+
+        elif intent == "CREATE":
+            print(f"Handling CREATE operation with data: {data}")
+            return handle_create(table, data)
+
+        elif intent == "UPDATE":
+            print(f"Handling UPDATE operation with filters: {filters} and data: {data}")
+            return handle_update(table, filters, data)
+
+        elif intent == "DELETE":
+            print(f"Handling DELETE operation with filters: {filters}")
+            return handle_delete(table, filters)
+
+        elif intent == "SEARCH":
+            print(f"Handling SEARCH operation with criteria: {data}")
+            return handle_search(table, data)
+
+        else:
+            print(f"ERROR: Unknown intent: {intent}")
+            return {"error": f"Unknown intent: {intent}"}
+
+
+# Create a singleton executor instance
+_executor = RuleBasedExecutor()
+
+
+def execute(action: Union[Dict[str, Any], Any]) -> Dict[str, Any]:
+    """Execute a structured CRUD action against the database.
+
+    Delegates to the RuleBasedExecutor instance.
+
+    Args:
+        action: The structured action to execute (dict or Action object)
+
+    Returns:
+        Dictionary with the result of the execution
+    """
+    return _executor.execute(action)
 
 def handle_read(table, filters):
     """Handle READ operations"""

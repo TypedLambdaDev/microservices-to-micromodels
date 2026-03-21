@@ -1,50 +1,32 @@
-"""
-Entity extraction interface module.
-Provides a unified API for different entity extraction implementations.
-"""
-import os
-from .regex_extractor import extract_entities as regex_extract_entities
-from .spacy_extractor import extract_entities as spacy_extract_entities
+"""Abstract base class for entity extraction.
 
-def extract_entities(text):
-    """
-    Extract entities from the given text using the configured extractor.
-    
-    Args:
-        text (str): The input text to extract entities from
-        
-    Returns:
-        dict: A dictionary containing the extracted resource, filters, and data
-    """
-    # Use environment variable to control which extractor to use
-    use_regex = os.environ.get("USE_REGEX_EXTRACTOR", "").lower() in ("true", "1", "yes")
-    
-    if use_regex:
-        return regex_extract_entities(text)
-    else:
-        try:
-            return spacy_extract_entities(text)
-        except Exception as e:
-            # Fallback to regex extractor if spaCy fails
-            print(f"SpaCy extractor failed: {str(e)}. Falling back to regex extractor.")
-            return regex_extract_entities(text)
+Provides a unified interface for different entity extraction implementations.
+"""
+from abc import ABC, abstractmethod
+from typing import Dict, Any
 
-def compare_extractors(text):
+
+class EntityExtractor(ABC):
+    """Abstract base class for entity extractors.
+
+    All entity extraction implementations must inherit from this class
+    and implement the extract_entities method.
     """
-    Compare the results of both entity extractors for the same text.
-    
-    Args:
-        text (str): The input text to extract entities from
-        
-    Returns:
-        dict: The results from both extractors
-    """
-    # Extract entities using both extractors
-    regex_entities = regex_extract_entities(text)
-    spacy_entities = spacy_extract_entities(text)
-    
-    return {
-        "text": text,
-        "regex_extractor": regex_entities,
-        "spacy_extractor": spacy_entities
-    }
+
+    @abstractmethod
+    def extract_entities(self, text: str) -> Dict[str, Any]:
+        """Extract entities from the given text.
+
+        Args:
+            text: The input text to extract entities from
+
+        Returns:
+            Dictionary containing the extracted entities with keys:
+            - resource: The target resource type (e.g., "user", "order")
+            - filters: WHERE conditions for filtering
+            - data: Data for INSERT/UPDATE operations
+
+        Raises:
+            Exception: If extraction fails
+        """
+        pass
