@@ -136,6 +136,24 @@ python test_data_flow.py           # Data flow tests
 uvicorn nlcrud.api.app:app --reload
 ```
 
+## Package Management
+
+**Use `uv` for all package management:**
+```bash
+# Install dependencies
+uv pip install -e .
+
+# Install with dev dependencies
+uv pip install -e ".[dev]"
+
+# Run Python commands
+uv run python main.py serve
+
+# Don't use: pip, pip3, poetry, or setuptools directly
+```
+
+See `pyproject.toml` for dependency definitions.
+
 ## Configuration
 
 ### Environment Variables

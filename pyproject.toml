@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nlcrud"
+version = "1.0.0"
+description = "Natural Language CRUD Engine"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    { name = "NLCRUD Team", email = "example@example.com" }
+]
+license = { text = "MIT" }
+keywords = ["nlp", "crud", "database", "fastapi"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "fasttext-numpy2>=0.9.2",
+    "fastapi>=0.95.0",
+    "uvicorn>=0.21.0",
+    "pydantic>=1.10.0",
+    "spacy>=3.5.0",
+    "requests>=2.28.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+]
+
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/nlcrud"
+Documentation = "https://github.com/yourusername/nlcrud#readme"
+
+[project.scripts]
+nlcrud = "nlcrud.cli:main"
+
+[tool.uv]
+# Lock file for uv (auto-generated)
+lock-file = "uv.lock"
+
+[tool.setuptools]
+packages = ["nlcrud"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
