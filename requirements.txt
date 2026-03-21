@@ -1,5 +1,8 @@
-fasttext
+fasttext-numpy2
 fastapi
 uvicorn
 pydantic
 spacy
+requests
+python-dotenv
+httpx  # For TestClient and API testing

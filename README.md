@@ -24,7 +24,9 @@ Entity Extraction (spaCy NER + Regex Fallback)
 Action Builder (Structured CRUD Schema)
    ↓
 Execution Layer (SQL Generator)
-   ↓
+   ↓                  ↓
+Standard Executor    SQLCoder Executor (LLM-based)
+   ↓                  ↓
 Response Formatter
 ```
 
@@ -35,6 +37,7 @@ Response Formatter
 │
 ├── main.py                # Main entry point for all functionality
 ├── test_nlcrud.py         # Test script for natural language queries
+├── test_sqlcoder.py       # Test script for SQLCoder implementation
 │
 ├── nlcrud/                # Main package
 │   ├── api/               # API-related code
@@ -53,7 +56,8 @@ Response Formatter
 │   │   └── interface.py   # Unified interface for intent classification
 │   │
 │   ├── db/                # Database-related code
-│   │   ├── executor.py    # SQL execution engine
+│   │   ├── executor.py    # Standard SQL execution engine
+│   │   ├── sqlcoder_executor.py # SQLCoder-based execution engine
 │   │   ├── schema.py      # Schema definition
 │   │   ├── init.py        # Database initialization
 │   │   └── interface.py   # Unified interface for database operations
@@ -185,6 +189,7 @@ The API will be available at http://localhost:8000
 - `POST /query`: Process a natural language query
 - `GET /schema`: Get the available schema information
 - `POST /compare_extractors`: Compare results from both entity extractors
+- `POST /generate_sql`: Generate SQL from natural language without executing it (SQLCoder only)
 
 ### Example Queries
 
@@ -209,6 +214,9 @@ curl -X POST "http://localhost:8000/query" -H "Content-Type: application/json" -
 
 # Compare both entity extractors
 curl -X POST "http://localhost:8000/compare_extractors" -H "Content-Type: application/json" -d '{"text": "find users who are 30 years old with email john@example.com"}'
+
+# Generate SQL without executing (SQLCoder only)
+curl -X POST "http://localhost:8000/generate_sql" -H "Content-Type: application/json" -d '{"text": "find users who are older than 30 and have gmail accounts"}'
 ```
 
 ## Performance
@@ -302,6 +310,94 @@ uvicorn nlcrud.api.app:app --reload
 
 You can also compare both extractors using the `/compare_extractors` endpoint.
 
+## SQLCoder Integration
+
+The system now supports using SQLCoder, a language model specifically trained to generate SQL from natural language, as an alternative to the rule-based SQL generation:
+
+### Features
+
+- Direct natural language to SQL translation
+- More flexible query handling
+- Better support for complex queries
+- Maintains the same interface as the original executor
+
+### How to Use SQLCoder
+
+You can enable SQLCoder in several ways:
+
+#### Using environment variables:
+```
+# Use SQLCoder
+export USE_SQLCODER=true
+python main.py
+
+# Use standard executor (default)
+python main.py
+```
+
+#### Using the .env file:
+Create a `.env` file based on the provided `.env.example`:
+```
+USE_SQLCODER=true
+LLM_PROVIDER=api
+SQLCODER_API_URL=https://your-sqlcoder-api-endpoint
+SQLCODER_API_KEY=your-api-key
+```
+
+### Using Local LLMs
+
+The system supports using local LLMs via Ollama or LM Studio:
+
+#### Ollama Setup:
+
+1. Install Ollama from [ollama.ai](https://ollama.ai)
+2. Pull the SQLCoder model (or any SQL-capable model):
+   ```
+   ollama pull sqlcoder
+   ```
+3. Configure the environment:
+   ```
+   USE_SQLCODER=true
+   LLM_PROVIDER=ollama
+   OLLAMA_URL=http://localhost:11434/api/generate
+   OLLAMA_MODEL=sqlcoder
+   ```
+
+#### LM Studio Setup:
+
+1. Install LM Studio from [lmstudio.ai](https://lmstudio.ai)
+2. Download a SQL-capable model like SQLCoder or CodeLlama
+3. Start the local inference server in LM Studio
+4. Configure the environment:
+   ```
+   USE_SQLCODER=true
+   LLM_PROVIDER=lmstudio
+   LMSTUDIO_URL=http://localhost:1234/v1/completions
+   LMSTUDIO_MODEL=your-model-name
+   ```
+
+### New API Endpoint
+
+When SQLCoder is enabled, a new endpoint is available:
+
+- `POST /generate_sql`: Generate SQL from natural language without executing it
+
+Example:
+```bash
+# Generate SQL without executing
+curl -X POST "http://localhost:8000/generate_sql" -H "Content-Type: application/json" -d '{"text": "find users who are older than 30"}'
+```
+
+### Testing SQLCoder
+
+You can test the SQLCoder implementation using the provided test script:
+
+```bash
+python test_sqlcoder.py
+```
+
+This will run a series of tests to verify that SQLCoder is working correctly.
+
 ## Modular Package Structure
 
 The codebase has been reorganized into a modular package structure with the following benefits:
@@ -322,6 +418,7 @@ The new structure follows these design principles:
 ## Future Improvements
 
 - ✅ Add NER model for better entity extraction
+- ✅ Add SQLCoder for natural language to SQL generation
 - Add embedding model for semantic schema matching
 - Add REST API adapter for external systems
 - Add workflow execution engine

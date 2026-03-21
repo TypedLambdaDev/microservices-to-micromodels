@@ -12,5 +12,7 @@ __label__UPDATE change email of user
 __label__DELETE delete user
 __label__DELETE remove customer
 
+__label__SEARCH how many users
 __label__SEARCH find users older than 40
 __label__SEARCH search users age 30
+__label__SEARCH who is rajesh
