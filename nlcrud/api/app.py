@@ -15,6 +15,7 @@ from nlcrud.exceptions import NLCRUDError
 from nlcrud.entity_extraction.regex_extractor import extract_entities as regex_extract
 from nlcrud.entity_extraction.spacy_extractor import extract_entities as spacy_extract
 from nlcrud.db.schema import SCHEMA
+from nlcrud.db.executor import initialize_database
 from nlcrud.logger import get_logger
 
 logger = get_logger("api")
@@ -24,6 +25,15 @@ app = FastAPI(
     description="Convert natural language commands into CRUD operations",
     version="1.0.0"
 )
+
+
+@app.on_event("startup")
+def startup_event():
+    """Initialize database on application startup."""
+    logger.info("Initializing database...")
+    initialize_database()
+    logger.info("Database initialized")
+
 
 # Initialize handlers
 query_handler = QueryHandler()

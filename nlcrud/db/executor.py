@@ -255,11 +255,11 @@ def handle_delete(table, filters):
 def handle_search(table, data):
     """Handle SEARCH operations"""
     print("\n----- SEARCH Operation Details -----")
-    
+
     sql = f"SELECT * FROM {table} WHERE "
     conditions = []
     params = []
-    
+
     for key, value in data.items():
         if isinstance(value, int) or isinstance(value, float):
             conditions.append(f"{key} = ?")
@@ -269,27 +269,24 @@ def handle_search(table, data):
             conditions.append(f"{key} LIKE ?")
             params.append(f"%{value}%")
             print(f"Adding LIKE condition for {key} LIKE '%{value}%'")
-    
+
     if not conditions:
         print("ERROR: No search criteria provided")
         return {"error": "No search criteria provided"}
-    
+
     sql += " AND ".join(conditions)
-    
+
     print(f"Generated SQL: {sql}")
     print(f"SQL parameters: {params}")
-    
+
     cursor.execute(sql, params)
     columns = [description[0] for description in cursor.description]
     results = []
-    
+
     for row in cursor.fetchall():
         results.append(dict(zip(columns, row)))
-    
+
     print(f"Search returned {len(results)} results")
     print(f"Result data: {results}")
-    
-    return {"status": "success", "data": results}
 
-# Initialize the database when the module is imported
-initialize_database()
+    return {"status": "success", "data": results}
