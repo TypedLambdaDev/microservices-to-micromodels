@@ -29,32 +29,6 @@ OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "sqlcoder")
 print(f"Using Ollama LLM provider at {OLLAMA_URL} with model {OLLAMA_MODEL}")
 
 
-def initialize_database():
-    """
-    Initialize the database by creating tables based on the schema.
-    """
-    # Create users table
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        email TEXT,
-        age INTEGER
-    )
-    ''')
-    
-    # Create orders table
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        amount REAL,
-        FOREIGN KEY (user_id) REFERENCES users (id)
-    )
-    ''')
-    
-    conn.commit()
-
 def generate_sql_from_nl(intent, resource, filters, data):
     """
     Generate SQL from natural language using Ollama.
@@ -393,6 +367,3 @@ def execute(action: Union[Dict[str, Any], Any]) -> Dict[str, Any]:
         Dictionary with execution result
     """
     return _executor.execute(action)
-
-# Initialize the database when the module is imported
-initialize_database()

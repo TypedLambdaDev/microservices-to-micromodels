@@ -24,8 +24,16 @@ class QueryHandler:
     """
 
     def __init__(self):
-        """Initialize handler with config."""
+        """Initialize handler with config and executors."""
         self.config = get_config()
+
+        # Initialize executors
+        from nlcrud.db.executor import RuleBasedExecutor
+        from nlcrud.db.sqlcoder_executor import SQLCoderExecutor
+
+        self.rule_based_executor = RuleBasedExecutor()
+        self.sqlcoder_executor = SQLCoderExecutor()
+
         logger.debug("QueryHandler initialized")
 
     def handle(self, text: str, should_execute: bool = True) -> Tuple[Action, Dict[str, Any], float]:
@@ -64,14 +72,11 @@ class QueryHandler:
             result = {}
             if should_execute:
                 logger.debug("Step 4: Database execution")
-                config = get_config()
 
-                if config.use_sqlcoder:
-                    from nlcrud.db.sqlcoder_executor import execute as execute_sqlcoder
-                    result = execute_sqlcoder(action)
+                if self.config.use_sqlcoder:
+                    result = self.sqlcoder_executor.execute(action)
                 else:
-                    from nlcrud.db.executor import execute as execute_standard
-                    result = execute_standard(action)
+                    result = self.rule_based_executor.execute(action)
 
                 logger.info(f"Execution result: {result}")
 
@@ -146,7 +151,7 @@ class SQLGenerationHandler:
 
         try:
             # Build action without execution
-            action, _, _ = self.query_handler.handle(text, execute=False)
+            action, _, _ = self.query_handler.handle(text, should_execute=False)
 
             # Generate SQL
             from nlcrud.db.sqlcoder_executor import generate_sql_from_nl

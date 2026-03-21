@@ -2,34 +2,39 @@ import time
 from nlcrud.intent_classification.classifier import classifier
 from nlcrud.entity_extraction.regex_extractor import extract_entities
 from nlcrud.api.action_builder import build_action
-from nlcrud.db.executor import execute
+from nlcrud.db.executor import RuleBasedExecutor
+
+
+# Initialize executor
+executor = RuleBasedExecutor()
+
 
 def process_query(text):
     """
     Process a natural language query and execute the corresponding CRUD operation.
-    
+
     Args:
         text (str): The natural language query
-        
+
     Returns:
         dict: The result of the query execution
     """
     start_time = time.time()
-    
+
     # Detect intent
     intent, confidence = classifier.predict(text)
     print(f"Intent: {intent} (confidence: {confidence:.4f})")
-    
+
     # Extract entities
     entities = extract_entities(text)
     print(f"Entities: {entities}")
-    
+
     # Build action
     action = build_action(intent, entities)
     print(f"Action: {action}")
-    
+
     # Execute action
-    result = execute(action)
+    result = executor.execute(action)
     print(f"Result: {result}")
     
     # Calculate latency
