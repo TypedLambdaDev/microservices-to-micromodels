@@ -34,71 +34,109 @@ Response Formatter
 
 ```
 /
+├── main.py                          # Main entry point for CLI
+├── pyproject.toml                   # Modern Python project configuration
+├── requirements.txt                 # Dependency list (for reference)
+├── setup.py                         # Legacy setuptools config (deprecated)
+├── Makefile                         # Development task automation
+├── pytest.ini                       # Pytest configuration
 │
-├── main.py                # Main entry point for all functionality
-├── test_nlcrud.py         # Test script for natural language queries
-├── test_sqlcoder.py       # Test script for SQLCoder implementation
+├── nlcrud/                          # Main package
+│   ├── action/                      # CRUD action domain and building
+│   │   ├── action.py               # Action dataclass with validation
+│   │   ├── builder.py              # ActionBuilder implementation
+│   │   ├── validator.py            # Action validation logic
+│   │   └── __init__.py
+│   │
+│   ├── api/                         # REST API layer
+│   │   ├── app.py                  # FastAPI application setup
+│   │   ├── handlers.py             # QueryHandler, SQLGenerationHandler
+│   │   ├── schemas.py              # Pydantic request/response models
+│   │   └── action_builder.py       # Re-exports from nlcrud.action
+│   │
+│   ├── entity_extraction/           # Entity extraction modules
+│   │   ├── regex_extractor.py      # Regex-based extractor
+│   │   ├── spacy_extractor.py      # spaCy NER-based extractor
+│   │   ├── interface.py            # Abstract interface
+│   │   └── __init__.py
+│   │
+│   ├── intent_classification/       # Intent classification modules
+│   │   ├── classifier.py           # FastText classifier
+│   │   ├── model.py                # Intent label definitions
+│   │   ├── train.py                # Training script
+│   │   ├── interface.py            # Abstract interface
+│   │   └── __init__.py
+│   │
+│   ├── db/                          # Database execution layer
+│   │   ├── executor.py             # RuleBasedExecutor
+│   │   ├── sqlcoder_executor.py    # SQLCoderExecutor (LLM-based)
+│   │   ├── schema.py               # Database schema definitions
+│   │   ├── init.py                 # Database initialization
+│   │   ├── interface.py            # DatabaseExecutor abstract interface
+│   │   ├── models/                 # Domain models
+│   │   │   ├── user.py            # User entity model
+│   │   │   ├── order.py           # Order entity model
+│   │   │   └── __init__.py
+│   │   └── __init__.py
+│   │
+│   ├── config.py                    # Centralized configuration management
+│   ├── logger.py                    # Structured logging infrastructure
+│   ├── exceptions.py                # Custom exception hierarchy
+│   ├── cli.py                       # CLI entry point
+│   └── __init__.py
 │
-├── nlcrud/                # Main package
-│   ├── api/               # API-related code
-│   │   ├── app.py         # FastAPI application
-│   │   └── action_builder.py # Action building logic
-│   │
-│   ├── entity_extraction/ # Entity extraction modules
-│   │   ├── regex_extractor.py # Regex-based entity extractor
-│   │   ├── spacy_extractor.py # spaCy-based entity extractor
-│   │   └── interface.py   # Unified interface for entity extraction
-│   │
-│   ├── intent_classification/ # Intent classification modules
-│   │   ├── classifier.py  # Intent classifier implementation
-│   │   ├── model.py       # Intent model definition
-│   │   ├── train.py       # Training script
-│   │   └── interface.py   # Unified interface for intent classification
-│   │
-│   ├── db/                # Database-related code
-│   │   ├── executor.py    # Standard SQL execution engine
-│   │   ├── sqlcoder_executor.py # SQLCoder-based execution engine
-│   │   ├── schema.py      # Schema definition
-│   │   ├── init.py        # Database initialization
-│   │   └── interface.py   # Unified interface for database operations
-│   │
-│   └── utils/             # Utility functions
+├── tests/                           # Test suite
+│   ├── unit/                        # Unit tests
+│   │   └── test_pipeline.py
+│   ├── integration/                 # Integration tests
+│   │   ├── test_query_pipeline.py
+│   │   ├── test_sqlcoder_executor.py
+│   │   └── test_ollama_connectivity.py
+│   ├── conftest.py                 # Pytest configuration
+│   └── fixtures/                    # Shared test fixtures
 │
 ├── model/
-│   └── intent.ftz         # Trained FastText model
+│   └── intent.ftz                   # Trained FastText model
 │
 ├── data/
-│   └── intent_train.txt   # Training data for intent model
+│   └── intent_train.txt             # Training data for intent model
+│
+├── scripts/
+│   └── enforce_uv.sh               # UV package manager enforcement
 │
 └── db/
-    └── db.sqlite          # SQLite database
+    └── db.sqlite                    # SQLite database
 ```
 
 ## Installation
 
 1. Clone the repository:
-```
+```bash
 git clone https://github.com/yourusername/nlcrud.git
 cd nlcrud
 ```
 
-2. Install dependencies:
-```
-pip install -r requirements.txt
+2. Install dependencies with `uv`:
+```bash
+# Install with uv
+uv pip install -e .
+
+# Or install with dev dependencies
+uv pip install -e ".[dev]"
 ```
 
 3. Download the spaCy language model:
-```
+```bash
 python -m spacy download en_core_web_sm
 ```
 
-3. Initialize the database:
-```
+4. Initialize the database:
+```bash
 python -m nlcrud.db.init
 ```
 
-4. Train the intent model:
-```
+5. Train the intent model:
+```bash
 python -m nlcrud.intent_classification.train
 ```
 
@@ -127,15 +165,21 @@ python main.py serve --port 8080 --reload --extractor regex
 
 ### Running Tests
 
-```
-python main.py test [options]
+Run tests using pytest:
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run with coverage
+pytest tests/ -v --cov=nlcrud
+
+# Run specific test file
+pytest tests/unit/test_pipeline.py -v
+pytest tests/integration/test_query_pipeline.py -v
 ```
 
-Options:
-- `--show-warnings`: Show all warnings (by default, warnings are suppressed)
-
-Example:
-```
+Or via CLI:
+```bash
 python main.py test
 ```
 
@@ -166,12 +210,12 @@ Options:
 - `--reload`: Enable auto-reload for development
 - `--extractor`: Entity extractor to use (choices: regex, spacy; default: spacy)
 
-### Using with uv
+### Package Management with uv
 
-This project is compatible with [uv](https://github.com/astral-sh/uv), the fast Python package installer and resolver:
+This project uses [uv](https://github.com/astral-sh/uv) for fast and reliable package management:
 
-```
-# Install uv
+```bash
+# Install uv (if not already installed)
 curl -sSf https://astral.sh/uv/install.sh | bash
 
 # Install the project with uv
@@ -179,7 +223,15 @@ uv pip install -e .
 
 # Install with development dependencies
 uv pip install -e ".[dev]"
+
+# Run commands with uv
+uv run python main.py serve
+
+# Create lock file for reproducible builds
+uv pip compile pyproject.toml -o uv.lock
 ```
+
+See `pyproject.toml` for dependency definitions.
 
 The API will be available at http://localhost:8000
 
@@ -390,13 +442,13 @@ curl -X POST "http://localhost:8000/generate_sql" -H "Content-Type: application/
 
 ### Testing SQLCoder
 
-You can test the SQLCoder implementation using the provided test script:
+You can test the SQLCoder implementation using pytest:
 
 ```bash
-python test_sqlcoder.py
+pytest tests/integration/test_sqlcoder_executor.py -v
 ```
 
-This will run a series of tests to verify that SQLCoder is working correctly.
+This will run a series of tests to verify that SQLCoder is working correctly with your Ollama setup.
 
 ## Modular Package Structure
 
