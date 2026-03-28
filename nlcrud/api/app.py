@@ -29,10 +29,16 @@ app = FastAPI(
 
 @app.on_event("startup")
 def startup_event():
-    """Initialize database on application startup."""
+    """Initialize database and action builder on application startup."""
+    from nlcrud.action import get_builder
+
     logger.info("Initializing database...")
     initialize_database()
     logger.info("Database initialized")
+
+    logger.info("Initializing action builder...")
+    get_builder(schema=SCHEMA)
+    logger.info("Action builder initialized")
 
 
 # Initialize handlers
