@@ -19,10 +19,19 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.ipynb
 
 # Virtual Environment
 venv/
 ENV/
+.venv/
 
 # IDE
 .idea/
@@ -37,6 +46,9 @@ ENV/
 # Logs
 *.log
 
+# Environment variables
+.env
+
 # Model files (optional, comment out if you want to include them)
 # model/*.ftz
 
@@ -48,3 +60,10 @@ ENV/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Project specific
+.claude/
+uv.lock
+.cache/
+*.out
+*.pid
